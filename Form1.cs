@@ -13,6 +13,8 @@ namespace DummyFileCreater
 {
 	public partial class Form1 : Form
 	{
+		private int DELIMITER_SIZE = 2;
+
 		public Form1()
 		{
 			InitializeComponent();
@@ -27,6 +29,7 @@ namespace DummyFileCreater
 			//radio
 			this.rbtSize.Checked = true;
 
+			this.chkboxDelimiter.Checked = false;	
 		}
 
 		/// <summary>
@@ -48,6 +51,7 @@ namespace DummyFileCreater
 				this.numRecordLength.Enabled = true;
 				this.numFileSize.Enabled = true;
 				this.numRowCount.Enabled = false;
+				this.chkboxDelimiter.Checked = false;
 
 			} else if ( this.rbtRowCount.Checked ) {
 				//caluc by row count
@@ -69,46 +73,64 @@ namespace DummyFileCreater
 		private void CalucByFileSize()
 		{
 			this.numRowCount.Value = 
-			 numFileSize.Value / ( numRecordLength.Value + 2 );
+			 numFileSize.Value / ( numRecordLength.Value + DELIMITER_SIZE );
 			//remnant 
 			this.numRemainder.Value = 
-				numFileSize.Value % ( numRecordLength.Value + 2 );
+				numFileSize.Value % ( numRecordLength.Value + DELIMITER_SIZE );
 		}
 
 		private void CalucByRowCount()
 		{
 			this.numFileSize.Value = 
-				numRowCount.Value * ( numRecordLength.Value + 2 );
+				numRowCount.Value * ( numRecordLength.Value + DELIMITER_SIZE );
 			//remnant 
 			this.numRemainder.Value = 
-				numFileSize.Value % ( numRecordLength.Value + 2 );
+				numFileSize.Value % ( numRecordLength.Value + DELIMITER_SIZE );
 		}
 
 		private void CalucBySizeAndLines()
 		{
 			this.numRecordLength.Value = 
-				numFileSize.Value / ( numRecordLength.Value + 2 );
+				numFileSize.Value / ( numRecordLength.Value + DELIMITER_SIZE );
 			//remnant 
 			this.numRemainder.Value = 
-				numFileSize.Value % ( numRecordLength.Value + 2 );
+				numFileSize.Value % ( numRecordLength.Value + DELIMITER_SIZE );
 		}
 
-		private void CreateFile( string filePath, decimal rowCount, int recordLength, string repeatChar )
+		private void CreateFile( string filePath, decimal rowCount, int writeLength, string repeatChar, bool addLine )
 		{
-			string recordChar = repeatChar.PadLeft( recordLength, repeatChar.ToCharArray()[0] );
-
-			using(
-				System.IO.StreamWriter sw = new System.IO.StreamWriter(
-				filePath, false, System.Text.Encoding.GetEncoding( "shift_jis" ) )
-			)
+			string recordChar = repeatChar.PadLeft( writeLength, repeatChar.ToCharArray()[0] );
+			if( addLine )
 			{
-				for( int i = 0; i < rowCount; i++ )
+				using(
+					System.IO.StreamWriter sw = new System.IO.StreamWriter(
+					filePath, false, System.Text.Encoding.GetEncoding( "shift_jis" ) )
+				)
 				{
-					//write file
-					sw.WriteLine( recordChar );
-					backgroundWorker1.ReportProgress( i );
+					for( int i = 0; i < rowCount; i++ )
+					{
+						//write file
+						sw.WriteLine( recordChar );
+						backgroundWorker1.ReportProgress( i +1);
+					}
+					sw.Close();
 				}
-				sw.Close();
+			}
+			else
+			{
+				using(
+					System.IO.StreamWriter sw = new System.IO.StreamWriter(
+					filePath, false, System.Text.Encoding.GetEncoding( "shift_jis" ) )
+				)
+				{
+					for( int i = 0; i < rowCount; i++ )
+					{
+						//write file
+						sw.Write( recordChar );
+						backgroundWorker1.ReportProgress( i +1);
+					}
+					sw.Close();
+				}
 			}
 		}
 
@@ -161,16 +183,30 @@ namespace DummyFileCreater
 
 		private decimal GetTotalFileSize()
 		{
-			return( this.numRecordLength.Value + 2 ) * this.numRowCount.Value;
+			return ( this.numRecordLength.Value + DELIMITER_SIZE ) * this.numRowCount.Value;
 		}
 
 		private void DoCreateFile( object sender, DoWorkEventArgs e )
 		{
+			int writeLength =  0;
+			decimal rowCount;
+			if( rbtSize.Checked )
+			{
+				rowCount = numRowCount.Value;
+				writeLength =  (int)this.numRecordLength.Value;
+			}
+			else
+			{
+				rowCount = numRowCount.Value;
+				writeLength =  (int)this.numRecordLength.Value;
+			}
+
 			this.CreateFile(
 				Path.Combine( this.txtFolderPath.Text, this.txtFileName.Text )
-				, this.numRowCount.Value
-				, (int)this.numRecordLength.Value
+				, rowCount
+				, writeLength
 				, this.txtReatChar.Text
+				, !rbtSize.Checked
 			);
 		}
 
@@ -183,6 +219,18 @@ namespace DummyFileCreater
 		{
 			//ProgressBar1の値を変更する
 			progressBar1.Value = e.ProgressPercentage;
+		}
+
+		private void chkboxDelimiter_CheckedChanged( object sender, EventArgs e )
+		{
+			if( this.chkboxDelimiter.Checked )
+			{
+				DELIMITER_SIZE = 2;
+			}
+			else
+			{
+				DELIMITER_SIZE = 0;
+			}
 		}
 
 	}
